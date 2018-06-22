@@ -1,6 +1,6 @@
 from django.contrib import admin
 
 # Register your models here.
-from .modle import Comment
+from .models import Comment
 
 admin.site.register(Comment)
