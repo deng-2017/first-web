@@ -1,66 +1,67 @@
-from django.shortcuts import render, get_object_or_404
-from django.db.models import Count
+
+
 # Create your views here.
-from django.http import HttpResponse
-from .models import Post,Category
-import markdown
-from comments.forms import CommentForm
+from django.shortcuts import render, get_object_or_404, redirect
+from blog.models import Post
+from django.http import HttpResponse,HttpResponseRedirect
+from .models import Comment
+from .forms import CommentForm
+from django.urls import reverse
+from django.db.models import Count
 
-def index(request):
-    '''
-    #return HttpResponse("欢迎访问我的博客首页！")
-    return render(request, 'blog/index.html', context={
-                      'title': '我的博客首页', 
-                      'welcome': '欢迎访问我的博客首页'
-                  })#调用 Django 提供的 render 函数。这个函数根据我们传入的参数来构造 HttpResponse
-    #我们首先把 HTTP 请求传了进去，然后 render 根据第二个参数的值 blog/index.html 找到这个模板文件并读取模板中的内容。
-    #之后 render 根据我们传入的 context 参数的值把模板中的变量替换为我们传递的变量的值，
-    #{{ title }} 被替换成了 context 字典中 title 对应的值，同理 {{ welcome }} 也被替换成相应的值。
-    '''
-    
-    post_list = Post.objects.all()
-    return render(request, 'blog/index.html', context={'post_list': post_list})
-    #all 方法返回的是一个 QuerySet（可以理解成一个类似于列表的数据结构）
-    #我们紧接着调用了 order_by 方法对这个返回的 queryset 进行排序。
-    #排序依据的字段是 created_time，即文章的创建时间。- 号表示逆序，如果不加 - 则是正序
-def detail(request,post_pk):
-    post1=Post.objects.annotate(comment_num=Count('comment'))####注意理解！！！！！！！！！！！！！！！！！！！！！！！！
-    post = get_object_or_404(post1, pk=post_pk)###注意理解！！！！！！！！！！！！！
-    
-    post.body = markdown.markdown(post.body,
-                                  extensions=[
-                                     'markdown.extensions.extra',
-                                     'markdown.extensions.codehilite',
-                                     'markdown.extensions.toc',
-                                  ])
-    # 记得在顶部导入 CommentForm
-    form = CommentForm()
-    # 获取这篇 post 下的全部评论
-    comment_list = post.comment_set.all()
-    
 
-    # 将文章、表单、以及文章下的评论列表作为模板变量传给 detail.html 模板，以便渲染相应数据。
-    context = {'post': post,
-               'form': form,
-               'comment_list': comment_list
-               }
-    return render(request, 'blog/detail.html', context=context)
-#注意这里我们用到了从 django.shortcuts 模块导入的 get_object_or_404 方法，
-#其作用就是当传入的 pk 对应的 Post 在数据库存在时，就返回对应的 post，如果不存在，就给用户返回一个 404 错误，表明用户请求的文章不存在。
-    
+def post_comment(request, post_pk):
+    # 先获取被评论的文章，因为后面需要把评论和被评论的文章关联起来。
+    # 这里我们使用了 Django 提供的一个快捷函数 get_object_or_404，
+    # 这个函数的作用是当获取的文章（Post）存在时，则获取；否则返回 404 页面给用户。
+    post1=Post.objects.annotate(comment_num=Count('comment'))
+    post = get_object_or_404(post1, pk=post_pk)
 
-#在模板中找到展示博客文章主体的 {{ post.body }} 部分，为其加上 safe 过滤器，{{ post.body|safe }}，大功告成，这下看到预期效果了。
-#safe 是 Django 模板系统中的过滤器（Filter），可以简单地把它看成是一种函数，其作用是作用于模板变量，将模板变量的值变为经过滤器处理过后的值。
-#例如这里 {{ post.body|safe }}，本来 {{ post.body }} 经模板系统渲染后应该显示 body 本身的值，但是在后面加上 safe 过滤器后，
-#渲染的值不再是body 本身的值，而是由 safe 函数处理后返回的值。过滤器的用法是在模板变量后加一个 | 管道符号，再加上过滤器的名称。
-#可以连续使用多个过滤器，例如 {{ var|filter1|filter2 }}。
-def archives(request, year, month):#这个是归档的视图链接
-    post_list = Post.objects.filter(created_time__year=year,#过滤filter
-                                    created_time__month=month
-                                    )
-    return render(request, 'blog/index.html', context={'post_list': post_list})
+    # HTTP 请求有 get 和 post 两种，一般用户通过表单提交数据都是通过 post 请求，
+    # 因此只有当用户的请求为 post 时才需要处理表单数据。
+    if request.method == 'POST':
+        # 用户提交的数据存在 request.POST 中，这是一个类字典对象。
+        # 我们利用这些数据构造了 CommentForm 的实例，这样 Django 的表单就生成了。
+        form = CommentForm(request.POST)
 
-def category(request,category_pk):
-    cate=get_object_or_404(Category,pk=category_pk)
-    post_list=Post.objects.filter(category=cate)
-    return render(request,'blog/index.html',context={'post_list':post_list})
+        # 当调用 form.is_valid() 方法时，Django 自动帮我们检查表单的数据是否符合格式要求。
+        if form.is_valid():
+            # 检查到数据是合法的，调用表单的 save 方法保存数据到数据库，
+            # commit=False 的作用是仅仅利用表单的数据生成 Comment 模型类的实例，但还不保存评论数据到数据库。
+            comment = form.save(commit=False)
+
+            # 将评论和被评论的文章关联起来。
+            comment.post = post
+
+            # 最终将评论数据保存进数据库，调用模型实例的 save 方法
+            comment.save()
+
+            # 重定向到 post 的详情页，实际上当 redirect 函数接收一个模型的实例时，它会调用这个模型实例的 get_absolute_url 方法，
+            # 然后重定向到 get_absolute_url 方法返回的 URL。
+            return HttpResponseRedirect(reverse('blog:detail', args=(post.pk,)))
+
+        else:
+            # 检查到数据不合法，重新渲染详情页，并且渲染表单的错误。
+            # 因此我们传了三个模板变量给 detail.html，
+            # 一个是文章（Post），一个是评论列表，一个是表单 form
+            # 注意这里我们用到了 post.comment_set.all() 方法，
+            # 这个用法有点类似于 Post.objects.all()
+            # 其作用是获取这篇 post 下的的全部评论，
+            # 因为 Post 和 Comment 是 ForeignKey 关联的，
+            # 因此使用 post.comment_set.all() 反向查询全部评论。
+            # 具体请看下面的讲解。
+            comment_list = post.comment_set.all()
+            
+            
+            context = {'post': post,
+                       'form': form,
+                       'comment_list': comment_list
+                       }
+            return render(request, 'blog/detail.html', context=context)
+    # 不是 post 请求，说明用户没有提交数据，重定向到文章详情页。
+    return HttpResponseRedirect(reverse('blog:detail', args=(post.pk,)))
+
+#这里 post.comment_set.all() 也等价于 Comment.objects.filter(post=post)，即根据 post 来过滤该 post 下的全部评论。
+#但既然我们已经有了一个 Post 模型的实例 post（它对应的是 Post 在数据库中的一条记录），那么获取和 post 关联的评论列表有一个简单方法，
+#即调用它的 xxx_set 属性来获取一个类似于 objects 的模型管理器，然后调用其 all 方法来返回这个 post 关联的全部评论。
+#其中 xxx_set 中的 xxx 为关联模型的类名（小写）。例如 Post.objects.filter(category=cate) 也可以等价写为 cate.post_set.all()。
