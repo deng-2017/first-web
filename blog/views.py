@@ -1,27 +1,18 @@
-from django.shortcuts import render, get_object_or_404
+# -*- coding: utf-8 -*-
 from django.db.models import Count
 # Create your views here.
 from django.http import HttpResponse
 from .models import Post,Category
 import markdown
 from comments.forms import CommentForm
-def index(request):
-    '''
-    #return HttpResponse("欢迎访问我的博客首页！")
-    return render(request, 'blog/index.html', context={
-                      'title': '我的博客首页', 
-                      'welcome': '欢迎访问我的博客首页'
-                  })#调用 Django 提供的 render 函数。这个函数根据我们传入的参数来构造 HttpResponse
-    #我们首先把 HTTP 请求传了进去，然后 render 根据第二个参数的值 blog/index.html 找到这个模板文件并读取模板中的内容。
-    #之后 render 根据我们传入的 context 参数的值把模板中的变量替换为我们传递的变量的值，
-    #{{ title }} 被替换成了 context 字典中 title 对应的值，同理 {{ welcome }} 也被替换成相应的值。
-    '''
-    
-    post_list = Post.objects.all()
-    return render(request, 'blog/index.html', context={'post_list': post_list})
-    #all 方法返回的是一个 QuerySet（可以理解成一个类似于列表的数据结构）
-    #我们紧接着调用了 order_by 方法对这个返回的 queryset 进行排序。
-    #排序依据的字段是 created_time，即文章的创建时间。- 号表示逆序，如果不加 - 则是正序
+from django.views.generic import ListView
+
+class IndexView(ListView):
+    model = Post
+    template_name = 'blog/index.html'
+    context_object_name = 'post_list'
+
+
 def detail(request,post_pk):
     
     post1=Post.objects.annotate(comment_num=Count('comment'))####注意理解！！！！！！！！！！！！！！！！！！！！！！！！
@@ -54,13 +45,14 @@ def detail(request,post_pk):
 #例如这里 {{ post.body|safe }}，本来 {{ post.body }} 经模板系统渲染后应该显示 body 本身的值，但是在后面加上 safe 过滤器后，
 #渲染的值不再是body 本身的值，而是由 safe 函数处理后返回的值。过滤器的用法是在模板变量后加一个 | 管道符号，再加上过滤器的名称。
 #可以连续使用多个过滤器，例如 {{ var|filter1|filter2 }}。
-def archives(request, year, month):#这个是归档的视图链接
-    post_list = Post.objects.filter(created_time__year=year,#过滤filter
-                                    created_time__month=month
-                                    )
-    return render(request, 'blog/index.html', context={'post_list': post_list})
+class Archives(IndexView):
+    def get_queryset(self):
+        return super(Archives,self).get_queryset().filter(created_time__year=year,created_time__month=month)
 
-def category(request,category_pk):
-    cate=get_object_or_404(Category,pk=category_pk)
-    post_list=Post.objects.filter(category=cate)
-    return render(request,'blog/index.html',context={'post_list':post_list})
+
+class CategoryView(IndexView):
+    def get_queryset(self):
+        cate=get_object_or_404(Category,self.kwargs.get(category_pk))
+        return super(Category,self).get_queryset().filter(category=cate)#理解self.kwaargs.get，还有super 父类继承，还有get_
+    #queryset()调用和复写。
+
