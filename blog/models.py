@@ -70,7 +70,7 @@ class Post(models.Model):
     def increase_views(self):
         self.views += 1
         self.save(update_fields=['views'])#数据要调用一次就增加一下，然后存储到数据库
-    def save(self,*args,*kwargs):
+    def save(self,*args,**kwargs):
         if not self.excerpt:
             md = markdown.Markdown(extensions=[
                     'markdown.extensions.extra',
@@ -80,7 +80,7 @@ class Post(models.Model):
             # strip_tags 去掉 HTML 文本的全部 HTML 标签
             # 从文本摘取前 54 个字符赋给 excerpt
             self.excerpt = strip_tags(md.convert(self.body))[:54]
-        super(Post,self).save(*args,*kwargs)
+        super(Post,self).save(*args,**kwargs)
     def __str__(self):
         return self.title
     class Meta:
