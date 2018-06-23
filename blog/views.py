@@ -45,14 +45,16 @@ def detail(request,post_pk):
 #例如这里 {{ post.body|safe }}，本来 {{ post.body }} 经模板系统渲染后应该显示 body 本身的值，但是在后面加上 safe 过滤器后，
 #渲染的值不再是body 本身的值，而是由 safe 函数处理后返回的值。过滤器的用法是在模板变量后加一个 | 管道符号，再加上过滤器的名称。
 #可以连续使用多个过滤器，例如 {{ var|filter1|filter2 }}。
-class Archives(IndexView):
+class ArchivesView(IndexView):
     def get_queryset(self):
+        year = self.kwargs.get('year')
+        month = self.kwargs.get('month')
         return super(Archives,self).get_queryset().filter(created_time__year=year,created_time__month=month)
 
 
 class CategoryView(IndexView):
     def get_queryset(self):
-        cate=get_object_or_404(Category,self.kwargs.get(category_pk))
+        cate=get_object_or_404(Category,self.kwargs.get('category_pk'))
         return super(Category,self).get_queryset().filter(category=cate)#理解self.kwaargs.get，还有super 父类继承，还有get_
     #queryset()调用和复写。
 
