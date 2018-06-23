@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from django.shortcuts import render, get_object_or_404
 from django.db.models import Count
 # Create your views here.
 from django.http import HttpResponse
@@ -7,10 +8,6 @@ import markdown
 from comments.forms import CommentForm
 from django.views.generic import ListView
 
-class IndexView(ListView):
-    model = Post
-    template_name = 'blog/index.html'
-    context_object_name = 'post_list'
 
 
 def detail(request,post_pk):
@@ -45,6 +42,11 @@ def detail(request,post_pk):
 #例如这里 {{ post.body|safe }}，本来 {{ post.body }} 经模板系统渲染后应该显示 body 本身的值，但是在后面加上 safe 过滤器后，
 #渲染的值不再是body 本身的值，而是由 safe 函数处理后返回的值。过滤器的用法是在模板变量后加一个 | 管道符号，再加上过滤器的名称。
 #可以连续使用多个过滤器，例如 {{ var|filter1|filter2 }}。
+class IndexView(ListView):
+    model = Post
+    template_name = 'blog/index.html'
+    context_object_name = 'post_list'
+
 class ArchivesView(IndexView):
     def get_queryset(self):
         year = self.kwargs.get('year')
