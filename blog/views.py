@@ -237,14 +237,26 @@ class IndexView(ListView):
 
 
 class ArchivesView(IndexView):
+    
     def get_queryset(self):
         year = self.kwargs.get('year')
         month = self.kwargs.get('month')
         return super(Archives,self).get_queryset().filter(created_time__year=year,created_time__month=month)
 
 
-class CategoryView(IndexView):
+class CategoryView(ListView):
+    model = Post
+    template_name = 'blog/index.html'
+    context_object_name = 'post_list'
     def get_queryset(self):
-        cate=get_object_or_404(Category,self.kwargs.get('category_pk'))
-        return super(Category,self).get_queryset().filter(category=cate)#理解self.kwargs.get，还有super 父类继承，还有get_
+        cate=get_object_or_404(Category,pk=self.kwargs.get('category_pk'))
+        return super(CategoryView,self).get_queryset().filter(category=cate)#理解self.kwargs.get，还有super 父类继承，还有get_
     #queryset()调用和复写。
+class TagView(ListView):
+    model = Post
+    template_name = 'blog/index.html'
+    context_object_name = 'post_list'
+    def get_queryset(self):
+        tag=get_object_or_404(Tag,pk=self.kwargs.get('pk'))
+        return super(TagView,self).get_queryset().filter(tags=tag)
+        
