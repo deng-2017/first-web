@@ -8,8 +8,9 @@ urlpatterns=[
         #path('page/<int:page_num>/',views.IndexView.as_view(),name='index')
         path('post/<int:post_pk>/',views.PostDetailView.as_view(), name='detail'),#这他妈的只能用下划线吗post_pk
         path('archives/<int:year>/<int:month>/',views.ArchivesView.as_view(),name='archives'),#传递的参数要在url里面
-        path('<str:category_name>/<int:category_pk>/',views.CategoryView.as_view(),name='category'),
+        path('category/<int:category_pk>/',views.CategoryView.as_view(),name='category'),
         path('tag/<int:tag_pk>/',views.TagView.as_view(),name='tags'),
+        path('serch/', views.search, name='search')
         ]
 
 

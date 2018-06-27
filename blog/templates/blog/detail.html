@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load blog_tags %}
 {% block main %}
     <main class="col-md-8">
         <article class="post post-{{post.pk}}">
@@ -7,7 +8,7 @@
                 <div class="entry-meta">
                     <span class="post-category"><a href="#">{{ post.category.name }}</a></span>
                     <span class="post-date"><a href="#"><time class="entry-date"
-                                                              datetime="2012-11-09T23:15:57+00:00">2017年5月11日</time></a></span>
+                                                              datetime="{{ post.created_time }}">{{ post.created_time }}</time></a></span>
                     <span class="post-author"><a href="#">{{ post.author }}</a></span>
                     <span class="comments-link"><a href="#">{{post.comment_set.count}}评论</a></span>
                     <span class="views-count"><a href="#">{{post.views}} 阅读</a></span>
@@ -15,6 +16,7 @@
             </header>
             <div class="entry-content clearfix">
                 {{ post.body|safe }}
+                 
             </div>
         </article>
         <section class="comment-area" id="comment-area">
@@ -70,24 +72,51 @@
     </main>
 {% endblock main %}
         {% block toc %}
-        <div class="widget widget-content">
-            <h3 class="widget-title">文章目录</h3>
-            <ul>
-                <li>
-                    <a href="#">教程特点</a>
-                </li>
-                <li>
-                    <a href="#">谁适合这个教程</a>
-                </li>
-                <li>
-                    <a href="#">在线预览</a>
-                </li>
-                <li>
-                    <a href="#">资源列表</a>
-                </li>
-                <li>
-                    <a href="#">获取帮助</a>
-                </li>
-            </ul>
-        </div>
+                <div class="widget widget-content">
+                    <h3 class="widget-title">文章目录</h3>
+                    {{ post.toc|safe }}
+                </div>
+                <div class="widget widget-archives">
+                    <h3 class="widget-title">归档</h3>
+                    {% archives as date_list %}
+                    <ul>
+                        {% for date in date_list %}
+                        <li>
+                            <a href="{% url 'blog:archives' date.year date.month %}">{{ date.year }} 年 {{ date.month }} 月</a>
+                        </li>
+                        {% empty %}
+                        暂无归档！
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <div class="widget widget-category">
+                    <h3 class="widget-title">分类</h3>
+                    <ul>
+                        
+                        <li>
+                            <a href="{% url 'blog:category' post.category.pk %}">{{ post.category.name }}
+                            <span class="post-count">({{ post.category.post_set.count }})</span>
+                            </a>
+                        </li>
+                        
+                    </ul>
+                </div>
+                <div class="widget widget-tag-cloud">
+                    <h3 class="widget-title">标签云</h3>
+                    <ul>
+                        {% for tag in post.tags.all %}
+                        <li>
+                            <a href="{% url 'blog:tags' tag.pk %}">{{tag.name}}
+                            <span class="post-count">({{ tag.post_set.count }})</span>
+                            </a>
+                        </li>
+                        {% empty %}
+                        暂无分类！
+                        {% endfor %}
+                    </ul>
+                </div>
+               
+        
+
         {% endblock toc %}
